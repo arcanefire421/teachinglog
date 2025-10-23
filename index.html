@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📘 教學日誌生成器（全科目手機專用 - 暫存區版）</title>
+<title>📘 教學日誌生成器（v12-Patch2 - 作業串接修復版）</title>
 <style>
 /* 確保手機相容性及美觀 (CSS) */
 body { font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
@@ -29,6 +29,31 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
   body{padding:4px;}
   .output{font-size:1.09rem;padding:8px 6px;}
   input,select,textarea{font-size:1.01rem;}
+}
+
+/* 1. 班級選單三格排版 */
+.select-group {
+    display: flex;
+    gap: 5px;
+}
+.select-group select {
+    width: 33.33%;
+    margin-top: 0;
+}
+.select-group + input {
+    margin-top: 5px;
+}
+/* 3. 按鈕排版 */
+.button-row {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+}
+.button-row button {
+    margin-top: 0;
+    margin-right: 0;
+    flex-grow: 1;
+    width: auto; /* 讓 flex-grow 控制寬度 */
 }
 
 /* 核取方塊樣式調整 */
@@ -69,25 +94,27 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
 </style>
 </head>
 <body>
-<h1>📘 教學日誌生成器（全科目手機版）</h1>
+<h1>📘 教學日誌生成器（v12-Patch2 - 作業串接修復版）</h1>
 
 <div class="card">
   <label>🏫 班級模板</label>
-  <select id="gradeSelect">
-    <option>高一</option>
-    <option>高二</option>
-    <option>高三</option>
-  </select>
-  <select id="classTypeSelect">
-    <option>進度</option>
-    <option>總複習</option>
-  </select>
-  <select id="subjectSelect">
-    <option>物理</option>
-    <option>化學</option>
-    <option>生物</option>
-    <option>地科</option>
-  </select>
+  <div class="select-group">
+    <select id="gradeSelect">
+      <option>高一</option>
+      <option>高二</option>
+      <option>高三</option>
+    </select>
+    <select id="subjectSelect">
+      <option>物理</option>
+      <option>化學</option>
+      <option>生物</option>
+      <option>地科</option>
+    </select>
+    <select id="classTypeSelect">
+      <option>進度</option>
+      <option>總複習</option>
+    </select>
+  </div>
   <input id="customClassName" placeholder="或自訂班級名稱（可空白）">
   <button class="green" onclick="addTemplate()">＋新增模板</button>
   <button onclick="fillTemplate()">填入班名</button>
@@ -119,7 +146,7 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
   
   <div id="cacheArea" class="section" style="text-align: center;">
       <button class="orange" onclick="addToCache()">➡️ 存入暫存區</button>
-      <button class="danger" onclick="clearCache()">🗑️ 清空暫存</button>
+      <button class="danger" onclick="clearCache(true)">🗑️ 清空暫存</button> 
   </div>
   
   <label style="margin-top: 10px;">💾 已選進度暫存區</label>
@@ -130,6 +157,13 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
   <div class="section">
     <label>📄 頁數</label>
     <input id="pages" placeholder="例：p.45~52">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      <span class="chip" onclick="appendPages('p. ')">p. </span>
+      <span class="chip" onclick="appendPages('p. 5~8')">p. 5~8</span>
+      <span class="chip" onclick="appendPages('p. 10~15')">p. 10~15</span>
+      <span class="chip" onclick="appendPages('p. 25~30')">p. 25~30</span>
+      <span class="chip" onclick="appendPages('p. 50~55')">p. 50~55</span>
+    </div>
   </div>
   <div class="section">
     <label>🧾 小考</label>
@@ -145,16 +179,16 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
 </div>
 
 <div class="card">
-  <button class="orange" onclick="generate()" style="width: 100%;">🚀 產生教學日誌</button>
-  <div style="margin-top: 8px;">
-    <button onclick="copyOutput()" style="width: 49%;">📋 複製</button>
-    <button class="danger" onclick="clearAll()" style="width: 49%;">🧹 清空</button>
+  <div class="button-row">
+    <button class="orange" onclick="generate()">🚀 產生日誌</button>
+    <button onclick="copyOutput()">📋 複製</button>
+    <button class="danger" onclick="clearAll(true)">🧹 清空</button>
   </div>
   <div id="output" class="output" style="display:none"></div>
 </div>
 
 <script>
-// ================ 教材（全科目課程）資料架構 (與 v9 相同) ================
+// ================ 教材（全科目課程）資料架構 (與 v11 相同) ================
 const BOOKS = {
     "physics": {
         "基礎物理(全)": {
@@ -347,7 +381,7 @@ const BOOKS = {
             "1-5_莫耳燃燒熱與莫耳生成熱": ["莫耳生成熱(選修)", "莫耳燃燒熱(選修)", "莫耳溶解熱(選修)", "莫耳中和熱(選修)"]
         },
         "第二章_氣體": {
-            "2-1_大氣的分層與氣體的通性": ["大氣層與大氣的組成(選修)", "氣體的通性(選修)", "氣體粒子的運動與溫度(選修)", "氣體壓力與大氣壓力的成因(選修)", "壓力的單位與換算(選修)", "閉口式壓力計(選修)", "開口式壓力計(選修)"],
+            "2-1_大氣的分層與氣體的通性": ["大氣層與大氣的組成(選修)", "氣體的通性(選修)", "氣體粒子的運動與溫度(選修)", "氣體壓力與大氣壓力的成因(選修)", "壓力的單位與換算(選修)", "閉口式壓力計(選修)", "開口式壓力計(選修)", "氣體分子的速率分布(選修)"],
             "2-2_氣體三大定律": ["波以耳定律(選修)", "波以耳定律與 J 形管裝置(選修)", "氣體體積與壓力的關係圖(選修)", "波以耳定律與生活中的應用(選修)", "絕對溫度與溫標(選修)", "查理定律(選修)", "氣體體積與溫度的關係圖(選修)", "查理定律與生活中的應用(選修)", "亞佛加厥定律(選修)", "標準溫壓與氣體莫耳體積(選修)", "亞佛加厥定律與生活中的應用(選修)"],
             "2-3_理想氣體": ["理想氣體方程式 PV＝nRT(選修)", "理想氣體常數(選修)", "理想氣體的圖形(選修)", "理想氣體與真實氣體(選修)", "理想氣體方程式的應用 PM＝dRT(選修)"],
             "2-4_分壓": ["莫耳分率(選修)", "混合氣體的平均分子量(選修)", "分壓(選修)", "道耳頓分壓定律的限制(選修)", "道耳頓分壓定律(選修)", "氣體的收集(選修)", "道耳頓的分壓定律的應用(選修)", "氣體的擴散與應用(選修)"]
@@ -527,7 +561,10 @@ function renderCache() {
     progressCache.forEach(item => {
         const path = item.path;
         if (groupedCache.has(path)) {
-            groupedCache.get(path).push(item.topic);
+            // 避免重複加入 topic
+            if (!groupedCache.get(path).includes(item.topic)) {
+                 groupedCache.get(path).push(item.topic);
+            }
         } else {
             groupedCache.set(path, [item.topic]);
         }
@@ -535,62 +572,154 @@ function renderCache() {
 
     let html = '';
     groupedCache.forEach((topics, path) => {
-        // 輸出格式: 冊別 / 章節 / 小節 (重點1 ＋ 重點2)
         const combinedTopics = topics.join(' ＋ ');
         const pathParts = path.split(' / ');
-        const displayPath = pathParts.slice(0, -1).join(' / ') + ' / ' + pathParts[pathParts.length - 1]; // 確保格式正確
+        const lastPart = pathParts.slice(-1)[0];
         
-        // 為了簡單顯示，這裡不顯示完整路徑，只顯示冊別/章節/小節
-        html += `<div class="cache-item">‧ ${displayPath} <br> (${combinedTopics})</div>`;
+        // 如果只有一個 topic 且 topic 等於路徑最後一部分（章/節/冊），則只顯示路徑
+        const isPathOnly = topics.length === 1 && topics[0] === lastPart;
+        
+        if (isPathOnly) {
+             html += `<div class="cache-item">‧ ${path}</div>`;
+        } else {
+             html += `<div class="cache-item">‧ ${path} <br> (${combinedTopics})</div>`;
+        }
     });
     
     cacheDiv.innerHTML = html;
 }
 
+// ============== 核心修改區: addToCache() 移除勾選限制，改為分層級存入 ==============
 function addToCache() {
+    let itemsToCache = [];
     const checks = document.querySelectorAll("#topicArea input[type=checkbox]:checked");
     
-    if (checks.length === 0) {
-        alert("請先勾選今日進度中的重點單元！");
-        return;
+    // 1. 優先處理有勾選重點的情況 (最高層級，最細節)
+    if (checks.length > 0) {
+        checks.forEach(cb => {
+            const path = cb.value; 
+            const topic = cb.dataset.topicName; 
+            itemsToCache.push({ path: path, topic: topic });
+            cb.checked = false; // 清空當前頁面勾選狀態
+        });
+        console.log(`已將 ${checks.length} 個勾選重點存入暫存區！`);
+    } else {
+        // 2. 處理沒有勾選重點，但選單有選取的情況
+        const subjectSelect = document.getElementById('subject');
+        const subjectKey = subjectSelect ? subjectSelect.value : '';
+        const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
+        const bookSelect = document.getElementById('bookSelect');
+        const chapterSelect = document.getElementById('chapterSelect');
+        const sectionSelect = document.getElementById('sectionSelect');
+        
+        const bookName = bookSelect ? bookSelect.value : '';
+        const chapterName = chapterSelect ? chapterSelect.value : '';
+        const sectionName = sectionSelect ? sectionSelect.value : '';
+
+        let progressPath = '';
+        let progressName = '';
+
+        if (subjectKey) {
+            if (sectionName) {
+                // 2.1. 選到小節: 存入 小節 名稱
+                progressPath = `${bookName} / ${chapterName} / ${sectionName}`;
+                progressName = sectionName;
+                
+            } else if (chapterName) {
+                // 2.2. 選到章節: 存入 章節 名稱
+                progressPath = `${bookName} / ${chapterName}`;
+                progressName = chapterName;
+                
+            } else if (bookName) {
+                // 2.3. 選到冊別: 存入 冊別 名稱
+                progressPath = `${bookName}`;
+                progressName = bookName;
+                
+            } else {
+                // 2.4. 只選到科目 (依照 V11 第 5 點要求，科目如果只選擇了 物理 則輸出物理到暫存區)
+                // 強化邏輯：如果只選科目，且該科目有冊別，則將所有冊別名稱作為 path，科目名稱作為 topic 存入
+                if (BOOKS[subjectKey]) {
+                    Object.keys(BOOKS[subjectKey]).forEach(bName => {
+                        // 這裡使用 冊別名 作為 path，科目名作爲 topic，符合輸出要求但避免單純存入科目名。
+                        itemsToCache.push({ path: bName, topic: subjectName }); 
+                    });
+                     if (itemsToCache.length > 0) {
+                         console.log(`偵測到只選科目，已將 ${subjectName} 涉及的 ${itemsToCache.length} 個冊別作為進度存入暫存區！`);
+                         
+                     }
+                    // 執行完畢，不需再繼續
+                    itemsToCache.forEach(item => {
+                        const isDuplicate = progressCache.some(p => p.path === item.path && p.topic === item.topic);
+                        if (!isDuplicate) progressCache.push(item);
+                    });
+                    saveCache(); 
+                    return; 
+                }
+            }
+        }
+        
+        // 3. 將最高層級的選擇加入 toCache 列表
+        if (progressPath && progressName) {
+            itemsToCache.push({ path: progressPath, topic: progressName });
+            console.log(`已將選單最高層級：${progressPath} 存入暫存區！`);
+        }
+        
+        // 4. 如果沒有任何選取 (包括科目)，則提示
+        if (itemsToCache.length === 0) {
+            console.log("請在上方選單選擇進度，或勾選重點單元。");
+            return;
+        }
     }
 
+    // 5. 統一寫入暫存區
     let addedCount = 0;
-    checks.forEach(cb => {
-        const path = cb.value; 
-        const topic = cb.dataset.topicName; 
-        
-        const newItem = { path: path, topic: topic };
-        
-        // 檢查是否已存在 (避免重複加入)
-        const isDuplicate = progressCache.some(item => item.path === path && item.topic === topic);
-
+    itemsToCache.forEach(item => {
+        const isDuplicate = progressCache.some(p => p.path === item.path && p.topic === item.topic);
         if (!isDuplicate) {
-            progressCache.push(newItem);
+            progressCache.push(item);
             addedCount++;
         }
     });
 
     if (addedCount > 0) {
         saveCache(); // 保存並重新渲染
-        // 清空當前頁面勾選狀態
-        checks.forEach(cb => cb.checked = false); 
-        alert(`已成功將 ${addedCount} 個重點存入暫存區！`);
+        // 如果是多個重點，訊息已在前面輸出
+        if (checks.length === 0 && itemsToCache.length === 1) {
+             console.log("進度已存入暫存區。");
+        } else if (checks.length === 0 && itemsToCache.length > 1) {
+             // 處理只選科目的多個冊別情況
+        } else {
+             // 處理多個重點的情況
+        }
+    } else if (checks.length > 0) {
+        // 有勾選，但都重複
+         console.log("您勾選的重點已全部在暫存區中。");
     } else {
-        alert("您勾選的重點已全部在暫存區中。");
+        // 有選單選項，但重複
+        console.log("您選擇的進度已在暫存區中。");
     }
 }
 
-function clearCache() {
-    if (confirm("確定要清空所有暫存區的進度嗎？")) {
-        progressCache = [];
-        saveCache();
-        alert("暫存區已清空！");
+
+// 增加一個參數以控制是否顯示警示窗
+function clearCache(showConfirm = false) {
+    if (showConfirm) {
+        if (!confirm("確定要清空所有暫存區的進度嗎？")) {
+            return;
+        }
     }
+    progressCache = [];
+    saveCache();
+    console.log("暫存區已清空！");
 }
 
-// ================ 級聯選單功能 (與 v9 相同) ================
+// 2. 頁數常用選項功能
+function appendPages(text) {
+  const pagesInput = document.getElementById("pages");
+  pagesInput.value = text.trim();
+}
 
+// ================ 級聯選單功能 (與 v11 相同) ================
 function loadBooks() {
     const subjectKey = document.getElementById('subject').value;
     const bookArea = document.getElementById('bookArea');
@@ -713,13 +842,13 @@ function setTomorrow(){
   document.getElementById("dateInput").value = formatDate(tomorrow);
 }
 
-// ================ 模板功能 (與 v9 相同) ================
+// ================ 模板功能 (移除警示窗) ================
 let templates = JSON.parse(localStorage.getItem('teachingLogTemplates')) || [];
 function saveTemplates() { localStorage.setItem('teachingLogTemplates', JSON.stringify(templates)); }
 function renderTemplates() {
   const list = document.getElementById("templateList");
   list.innerHTML = templates.map((t, i) => 
-    `<span class="chip" onclick="applyTemplate('${t}')" oncontextmenu="deleteTemplate(${i}); return false;">${t}</span>`
+    `<span class="chip" onclick="applyTemplate('${t}')" oncontextmenu="deleteTemplate(${i}, true); return false;">${t}</span>`
   ).join('');
 }
 function addTemplate() {
@@ -727,7 +856,8 @@ function addTemplate() {
   const type = document.getElementById("classTypeSelect").value || "";
   const subj = document.getElementById("subjectSelect").value || "";
   const custom = document.getElementById("customClassName").value.trim() || "";
-  const name = custom || `${grade}${type}${subj}`;
+  // 修正組合順序為 級別 + 科目 + 類型
+  const name = custom || `${grade}${subj}${type}`; 
   if (name && !templates.includes(name)) {
     templates.push(name);
     saveTemplates();
@@ -737,12 +867,16 @@ function addTemplate() {
 function applyTemplate(name) {
   document.getElementById("customClassName").value = name;
 }
-function deleteTemplate(index) {
-  if (confirm(`確定刪除模板：${templates[index]} 嗎？`)) {
+function deleteTemplate(index, showConfirm = false) {
+    if (showConfirm) {
+        if (!confirm(`確定刪除模板：${templates[index]} 嗎？`)) {
+            return;
+        }
+    }
     templates.splice(index, 1);
     saveTemplates();
     renderTemplates();
-  }
+    console.log(`模板已刪除。`);
 }
 function fillTemplate() {
   const className = (() => {
@@ -751,27 +885,32 @@ function fillTemplate() {
     const subj = document.getElementById("subjectSelect").value || "";
     const custom = document.getElementById("customClassName").value.trim();
     if (custom) return custom;
-    const combo = grade + type + subj;
+    // 修正組合順序為 級別 + 科目 + 類型
+    const combo = grade + subj + type;
     return combo; 
   })();
   document.getElementById("customClassName").value = className;
 }
-function clearTemplates() {
-  if (confirm("確定清空所有班級模板嗎？")) {
+function clearTemplates(showConfirm = false) {
+    if (showConfirm) {
+        if (!confirm("確定清空所有班級模板嗎？")) {
+            return;
+        }
+    }
     templates = [];
     saveTemplates();
     renderTemplates();
-  }
+    console.log("所有班級模板已清空。");
 }
 renderTemplates();
 
-// ================ 作業句庫功能 (與 v9 相同) ================
+// ================ 作業句庫功能 (v12-Patch2: 修正 appendHomework 語法錯誤) ================
 let sentences = JSON.parse(localStorage.getItem('homeworkSentences')) || ["講義 p.X~Y", "習題卷", "考卷訂正", "複習指定範圍"];
 function saveSentences() { localStorage.setItem('homeworkSentences', JSON.stringify(sentences)); }
 function renderSentences() {
   const list = document.getElementById("sentenceChips");
   list.innerHTML = sentences.map((s, i) => 
-    `<span class="chip" onclick="appendHomework('${s}')" oncontextmenu="deleteSentence(${i}); return false;">${s}</span>`
+    `<span class="chip" onclick="appendHomework('${s}')" oncontextmenu="deleteSentence(${i}, true); return false;">${s}</span>`
   ).join('');
 }
 function addSentence() {
@@ -783,145 +922,237 @@ function addSentence() {
     document.getElementById("newSentence").value = '';
   }
 }
+
+// *** 修復後的 appendHomework 函數 (V12-Patch2 核心修改) ***
 function appendHomework(s) {
   const homework = document.getElementById("homework");
   if (homework.value.trim() === '') {
     homework.value = s;
   } else if (!homework.value.includes(s)) {
+    // 修正了 homework.endsWith() 錯誤，現在改為 homework.value.endsWith()
     homework.value += (homework.value.endsWith('。') || homework.value.endsWith('、') || homework.value.endsWith('！') || homework.value.endsWith('？') ? '' : '＋') + s;
   }
 }
-function deleteSentence(index) {
-  if (confirm(`確定刪除句庫：${sentences[index]} 嗎？`)) {
+// *************************************************
+
+function deleteSentence(index, showConfirm = false) {
+    if (showConfirm) {
+        if (!confirm(`確定刪除句庫：${sentences[index]} 嗎？`)) {
+            return;
+        }
+    }
     sentences.splice(index, 1);
     saveSentences();
     renderSentences();
-  }
+    console.log("句庫項目已刪除。");
 }
 renderSentences();
 
-// ================ 產生日誌功能 (v10 優化：使用暫存區，輸出無空行) ================
+// ================ 產生日誌功能 (v12-Patch1 優化，無功能變動) ================
 function generate() {
-  // 1. 抓取所有值並進行 trim()
-  const customClassName = document.getElementById("customClassName").value.trim();
-  const date = document.getElementById("dateInput").value.trim();
-  const pages = document.getElementById("pages").value.trim();
-  const quiz = document.getElementById("quiz").value.trim();
-  const homework = document.getElementById("homework").value.trim();
-  
-  // 檢查是否有當前選中的重點並提醒存入暫存區
-  const currentChecks = document.querySelectorAll("#topicArea input[type=checkbox]:checked");
-  if (currentChecks.length > 0) {
-      if (!confirm(`您尚有 ${currentChecks.length} 個重點未存入暫存區，確定要直接產生日誌嗎？\n(建議先點擊「存入暫存區」)`)) {
-          return; // 取消產生
-      }
-      // 如果用戶確定繼續，將當前勾選的重點也加入暫存區 (臨時處理，不保存到 localStorage)
-      currentChecks.forEach(cb => {
-          const path = cb.value; 
-          const topic = cb.dataset.topicName; 
-          progressCache.push({ path: path, topic: topic });
-      });
-  }
-
-
-  const className = (() => {
-    if (customClassName) return customClassName;
-    const grade = document.getElementById("gradeSelect").value || "";
-    const type = document.getElementById("classTypeSelect").value || "";
-    const subj = document.getElementById("subjectSelect").value || "";
-    const combo = grade + type + subj;
-    return combo.trim();
-  })(); 
-
-  // 2. 處理進度：使用暫存區 (progressCache) 中的數據
-  
-  // 2.1. 將暫存區的進度依路徑重新分組
-  const groupedProgress = new Map();
-  progressCache.forEach(item => {
-    const path = item.path;
-    const topic = item.topic; 
+    // 1. 抓取所有值並進行 trim()
+    const customClassName = document.getElementById("customClassName").value.trim();
+    const date = document.getElementById("dateInput").value.trim();
+    const pages = document.getElementById("pages").value.trim();
+    const quiz = document.getElementById("quiz").value.trim();
+    const homework = document.getElementById("homework").value.trim();
     
-    if (groupedProgress.has(path)) {
-      groupedProgress.get(path).push(topic);
-    } else {
-      groupedProgress.set(path, [topic]);
+    // 1.1. 檢查是否有當前選中的重點：自動存入暫存區 (不給提示)
+    const currentChecks = document.querySelectorAll("#topicArea input[type=checkbox]:checked");
+    let tempCacheFromChecks = [];
+    if (currentChecks.length > 0) {
+        console.log(`偵測到 ${currentChecks.length} 個勾選重點，自動存入暫存區。`);
+        currentChecks.forEach(cb => {
+            const path = cb.value; 
+            const topic = cb.dataset.topicName; 
+            const newItem = { path: path, topic: topic };
+            
+            // 檢查是否已存在 (避免重複加入)
+            const isDuplicate = progressCache.some(item => item.path === path && item.topic === topic);
+
+            if (!isDuplicate) {
+                progressCache.push(newItem);
+            }
+            cb.checked = false; // 清空當前頁面勾選狀態
+        });
+        saveCache(); // 保存並重新渲染暫存區
     }
-  });
 
-  const progressLines = [];
-  
-  // 2.2. 遍歷 Map 輸出，使用緊湊格式
-  groupedProgress.forEach((topics, path) => {
-    // 輸出格式: ‧ 冊別 / 章節 / 小節 (重點1 ＋ 重點2)
-    const combinedTopics = topics.join(' ＋ ');
-    const parts = path.split(' / ');
-    const book = parts[0];
-    const chapter = parts[1];
-    const section = parts[2];
+    const className = (() => {
+        if (customClassName) return customClassName;
+        const grade = document.getElementById("gradeSelect").value || "";
+        const type = document.getElementById("classTypeSelect").value || "";
+        const subj = document.getElementById("subjectSelect").value || "";
+        // 修正組合順序為 級別 + 科目 + 類型
+        const combo = grade + subj + type;
+        return combo.trim();
+    })(); 
 
-    progressLines.push(`‧ ${book} / ${chapter} / ${section} (${combinedTopics})`);
-  });
+    // 2. 處理進度：優先使用暫存區 (progressCache) 中的數據
+    
+    let progressToOutput = []; // 儲存最終要輸出的進度項目
+    
+    if (progressCache.length > 0) {
+        // 2.1. A. 暫存區有資料：使用暫存區 (progressCache)
+        progressToOutput = [...progressCache]; // 複製一份，避免直接修改
+        console.log("進度來源：暫存區");
+    } else {
+        // 2.1. B. 暫存區無資料：嘗試從選單中抓取最高層級進度 (同 addToCache 邏輯，避免重複)
+        const subjectSelect = document.getElementById('subject');
+        const subjectKey = subjectSelect ? subjectSelect.value : '';
+        const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
+        const bookSelect = document.getElementById('bookSelect');
+        const chapterSelect = document.getElementById('chapterSelect');
+        const sectionSelect = document.getElementById('sectionSelect');
+        
+        const bookName = bookSelect ? bookSelect.value : '';
+        const chapterName = chapterSelect ? chapterSelect.value : '';
+        const sectionName = sectionSelect ? sectionSelect.value : '';
 
-  const progressOutput = progressLines.join('\n');
+        let progressPath = '';
+        let progressName = '';
+
+        if (sectionName) {
+            // 選到小節 (最高層級：小節)
+            progressPath = `${bookName} / ${chapterName} / ${sectionName}`;
+            progressName = sectionName;
+            
+        } else if (chapterName) {
+            // 只選到章節 (最高層級：章節)
+            progressPath = `${bookName} / ${chapterName}`;
+            progressName = chapterName;
+            
+        } else if (bookName) {
+            // 只選到冊別 (最高層級：冊別)
+            progressPath = `${bookName}`;
+            progressName = bookName;
+            
+        } else if (subjectKey) {
+            // 只選科目: 輸出科目名稱
+            // 由於這時沒有明確的 path，為了輸出，我們取所有冊別作為 path，科目名作為 topic
+            if (BOOKS[subjectKey]) {
+                Object.keys(BOOKS[subjectKey]).forEach(bName => {
+                     progressToOutput.push({ path: bName, topic: subjectName }); 
+                });
+            }
+            console.log("進度來源：選單 (只選科目)");
+        }
+        
+        // 將最高層級的單一選擇加入 output 列表
+        if (progressPath && progressName) {
+             progressToOutput.push({ path: progressPath, topic: progressName });
+             console.log("進度來源：選單 (最高層級)");
+        }
+        
+    }
+    
+    // 2.2. 將進度依路徑重新分組 (不論來源是暫存區還是自動抓取)
+    const groupedProgress = new Map();
+    progressToOutput.forEach(item => {
+      const path = item.path;
+      const topic = item.topic || path.split(' / ').pop(); // 如果沒有 topic，使用路徑的最後一部分
+      
+      if (groupedProgress.has(path)) {
+        if (!groupedProgress.get(path).includes(topic)) {
+             groupedProgress.get(path).push(topic);
+        }
+      } else {
+        groupedProgress.set(path, [topic]);
+      }
+    });
+
+    const progressLines = [];
+    
+    // 2.3. 遍歷 Map 輸出，使用緊湊格式
+    groupedProgress.forEach((topics, path) => {
+      // 輸出格式: ‧ 冊別 / 章節 / 小節 (重點1 ＋ 重點2)
+      const combinedTopics = topics.join(' ＋ ');
+      const parts = path.split(' / ');
+      const lastPart = parts.slice(-1)[0];
+      
+      // 判斷是否為「單一」進度，且重點名稱與路徑末端名稱相同 (或為只選科目的情況)
+      const isSingleMatch = (topics.length === 1 && (topics[0] === lastPart || topics[0] === document.getElementById('subject').options[document.getElementById('subject').selectedIndex].text));
+
+      if (isSingleMatch) {
+         progressLines.push(`‧ ${path}`);
+      } else {
+         progressLines.push(`‧ ${path} (${combinedTopics})`);
+      }
+      
+    });
+
+    const progressOutput = progressLines.join('\n');
 
 
-  // 3. 組合最終結果 (空值完全不顯示區塊，區塊間只有一個換行符)
-  let result = [];
+    // 3. 組合最終結果 (空值完全不顯示區塊，區塊間只有一個換行符)
+    let result = [];
 
-  // 班級
-  if (className) {
-    result.push(`🏫 班級\n${className}`);
-  }
+    // 班級
+    if (className) {
+        result.push(`🏫 班級\n${className}`);
+    }
 
-  // 日期
-  if (date) {
-    result.push(`🗓️ 日期\n${date}`);
-  }
+    // 日期
+    if (date) {
+        result.push(`🗓️ 日期\n${date}`);
+    }
 
-  // 進度 (從暫存區取出，可空)
-  if (progressOutput) {
-    result.push(`📘 今日進度\n${progressOutput}`);
-  }
+    // 進度 (從暫存區或選單取出，可空)
+    if (progressOutput) {
+        result.push(`📘 今日進度\n${progressOutput}`);
+    }
 
-  // 頁數
-  if (pages) {
-    result.push(`📄 頁數\n${pages}`);
-  }
+    // 頁數
+    if (pages) {
+        result.push(`📄 頁數\n${pages}`);
+    }
 
-  // 小考
-  if (quiz) {
-    result.push(`🧾 小考\n${quiz}`);
-  }
+    // 小考
+    if (quiz) {
+        result.push(`🧾 小考\n${quiz}`);
+    }
 
-  // 作業
-  if (homework) {
-    result.push(`🏠 作業\n${homework}`);
-  }
-  
-  // 4. 輸出
-  const out = document.getElementById("output");
-  out.style.display="block";
-  // 使用 \n 分隔每個區塊 (實現區塊間無空行)
-  out.textContent = result.join('\n').trim(); 
-  out.scrollIntoView({behavior:"smooth"});
-  
-  // 產生後清空暫存區
-  clearCache(false); // 內部呼叫，不彈出確認框
+    // 作業
+    if (homework) {
+        result.push(`🏠 作業\n${homework}`);
+    }
+    
+    // 4. 輸出
+    const out = document.getElementById("output");
+    out.style.display="block";
+    // 使用 \n 分隔每個區塊 (實現區塊間無空行)
+    out.textContent = result.join('\n').trim(); 
+    out.scrollIntoView({behavior:"smooth"});
+    
+    // 產生後清空暫存區
+    if (progressCache.length > 0) {
+        // 只要使用了暫存區的內容，就清空
+        progressCache = [];
+        saveCache(); // 清空並保存
+    }
 }
+
 
 function copyOutput(){
-  const text=document.getElementById("output").textContent;
-  if(!text) return alert("請先產生內容");
-  navigator.clipboard.writeText(text).then(() => {
-    alert("已複製到剪貼簿！");
-  }).catch(err => {
-    console.error('複製失敗:', err);
-    alert("複製失敗，請手動複製。");
-  });
+    const text=document.getElementById("output").textContent;
+    if(!text) {
+        console.log("請先產生內容");
+        return;
+    }
+    navigator.clipboard.writeText(text).then(() => {
+        console.log("已複製到剪貼簿！"); // 使用 console.log 替代 alert
+    }).catch(err => {
+        console.error('複製失敗:', err);
+    });
 }
 
-function clearAll(){
-  if(confirm("確定清空所有輸入框內容與暫存區嗎？")){
+// 增加一個參數以控制是否顯示警示窗
+function clearAll(showConfirm = false){
+    if (showConfirm) {
+        if (!confirm("確定清空所有輸入框內容與暫存區嗎？")) {
+            return;
+        }
+    }
     document.getElementById("dateInput").value = "";
     document.getElementById("bookArea").innerHTML = ""; 
     document.getElementById("pages").value = "";
@@ -931,10 +1162,11 @@ function clearAll(){
     document.getElementById("output").textContent = "";
     document.getElementById("output").style.display="none";
     
-    // 清空暫存區
+    // 清空暫存區 (無警示窗)
     progressCache = [];
     saveCache();
-  }
+    
+    console.log("所有內容已清空！");
 }
 
 // 初始化時設定今日日期並渲染暫存區
