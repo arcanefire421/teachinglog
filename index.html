@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📘 教學日誌生成器（v12-Patch2 - 作業串接修復版）</title>
+<title>📘 教學日誌生成器 (v13.1 - 穩定版)</title>
 <style>
 /* 確保手機相容性及美觀 (CSS) */
 body { font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
@@ -30,8 +30,6 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
   .output{font-size:1.09rem;padding:8px 6px;}
   input,select,textarea{font-size:1.01rem;}
 }
-
-/* 1. 班級選單三格排版 */
 .select-group {
     display: flex;
     gap: 5px;
@@ -43,7 +41,6 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
 .select-group + input {
     margin-top: 5px;
 }
-/* 3. 按鈕排版 */
 .button-row {
     display: flex;
     gap: 5px;
@@ -53,29 +50,25 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
     margin-top: 0;
     margin-right: 0;
     flex-grow: 1;
-    width: auto; /* 讓 flex-grow 控制寬度 */
+    width: auto;
 }
-
-/* 核取方塊樣式調整 */
 .unit-row{
-  display: flex; 
-  align-items: flex-start; 
+  display: flex;
+  align-items: flex-start;
   margin-top: 5px;
-  line-height: 1.2; 
+  line-height: 1.2;
 }
 .unit-row input[type=checkbox]{
-  width: auto; 
-  margin: 2px 5px 0 0; 
-  transform: scale(1.1); 
-  flex-shrink: 0; 
+  width: auto;
+  margin: 2px 5px 0 0;
+  transform: scale(1.1);
+  flex-shrink: 0;
 }
 .unit-label{
-  flex: 1; 
-  display: inline; 
+  flex: 1;
+  display: inline;
   margin-top: 0;
 }
-
-/* 暫存區樣式 */
 #progressCache {
     margin-top: 10px;
     border: 1px dashed #2563eb;
@@ -94,7 +87,7 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
 </style>
 </head>
 <body>
-<h1>📘 教學日誌生成器（v12-Patch2 - 作業串接修復版）</h1>
+<h1>📘 教學日誌生成器 (v13.1 - 穩定版)</h1>
 
 <div class="card">
   <label>🏫 班級模板</label>
@@ -118,7 +111,7 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
   <input id="customClassName" placeholder="或自訂班級名稱（可空白）">
   <button class="green" onclick="addTemplate()">＋新增模板</button>
   <button onclick="fillTemplate()">填入班名</button>
-  <button class="danger" onclick="clearTemplates()">全清模板</button>
+  <button class="danger" onclick="clearTemplates(true)">全清模板</button>
   <div id="templateList" style="margin-top:5px;"></div>
 </div>
 
@@ -140,17 +133,38 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
     <option value="biology">生物</option>
     <option value="earth">地科</option>
   </select>
-  
+
   <div id="bookArea" class="section">
-    </div>
-  
+  </div>
+
   <div id="cacheArea" class="section" style="text-align: center;">
       <button class="orange" onclick="addToCache()">➡️ 存入暫存區</button>
-      <button class="danger" onclick="clearCache(true)">🗑️ 清空暫存</button> 
+      <button class="danger" onclick="clearCache(true)">🗑️ 清空暫存</button>
   </div>
-  
+
   <label style="margin-top: 10px;">💾 已選進度暫存區</label>
   <div id="progressCache">目前無暫存進度。</div>
+</div>
+
+<div class="card">
+  <label>📚 課程資料產生器</label>
+  <p style="font-size:0.9rem; margin-top:0; color:#555;">
+    請貼上用 <b>Tab鍵</b> 縮排的課程文字。<b>最上層必須是「冊別」名稱。</b><br>
+    產生後，請手動複製內容並貼到 <code>data.js</code> 檔案中。
+  </p>
+  <textarea id="importTextArea" rows="8" placeholder="選修物理 ( I )
+	第1章 測量與不確定度
+		1-1 不確定度與有效數字
+			真值與不確定度(選修)
+	第2章 運動學－直線運動
+		2-1 位置、路徑長與位移
+			位置與坐標軸(選修)" style="font-family:monospace;"></textarea>
+  <button class="green" onclick="parseTextToJSON()">產生 data.js 內容</button>
+
+  <div id="exportArea" class="section" style="display:none;">
+    <label>✅ 產生的 JavaScript 內容</label>
+    <textarea id="exportTextArea" rows="10" readonly style="background:#f9f9f9; color:#333; font-family:monospace;"></textarea>
+  </div>
 </div>
 
 <div class="card">
@@ -180,7 +194,7 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
 
 <div class="card">
   <div class="button-row">
-    <button class="orange" onclick="generate()">🚀 產生日誌</button>
+    <button class="orange" onclick="generate()">🚀 產生</button>
     <button onclick="copyOutput()">📋 複製</button>
     <button class="danger" onclick="clearAll(true)">🧹 清空</button>
   </div>
@@ -190,8 +204,30 @@ button.danger{background:#ef4444;}button.green{background:#22c55e;}button.orange
 <script src="data.js"></script>
 
 <script>
-// ================ JS 變數與輔助函數 ================
-let progressCache = JSON.parse(localStorage.getItem('teachingLogCache')) || [];
+// ================ JS 變數與輔助函數 (v13.1 修正) ================
+
+/**
+ * [v13 修正] 新增：安全地從 localStorage 讀取 JSON 資料
+ * @param {string} key - localStorage 的 key
+ * @param {any} defaultValue - 如果解析失敗時的預設值
+ * @returns {any} 解析後的物件或預設值
+ */
+function safeJSONParse(key, defaultValue) {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (e) {
+        console.warn(`localStorage 資料 '${key}' 損毀，已重設。`, e);
+        localStorage.removeItem(key); // 清除損毀的資料
+        return defaultValue;
+    }
+}
+
+// [v13 修正] 使用 safeJSONParse 來初始化，避免網頁因
+let progressCache = safeJSONParse('teachingLogCache', []);
+let templates = safeJSONParse('teachingLogTemplates', []);
+let sentences = safeJSONParse('homeworkSentences', ["講義 p.X~Y", "習題卷", "考卷訂正", "複習指定範圍"]);
+
 
 function saveCache() {
     localStorage.setItem('teachingLogCache', JSON.stringify(progressCache));
@@ -200,17 +236,15 @@ function saveCache() {
 
 function renderCache() {
     const cacheDiv = document.getElementById('progressCache');
+    if (!cacheDiv) return; // 安全檢查
     if (progressCache.length === 0) {
         cacheDiv.innerHTML = '目前無暫存進度。';
         return;
     }
-
-    // 將暫存區的進度依路徑重新分組 (因為暫存時是單條儲存)
     const groupedCache = new Map();
     progressCache.forEach(item => {
         const path = item.path;
         if (groupedCache.has(path)) {
-            // 避免重複加入 topic
             if (!groupedCache.get(path).includes(item.topic)) {
                  groupedCache.get(path).push(item.topic);
             }
@@ -224,8 +258,6 @@ function renderCache() {
         const combinedTopics = topics.join(' ＋ ');
         const pathParts = path.split(' / ');
         const lastPart = pathParts.slice(-1)[0];
-        
-        // 如果只有一個 topic 且 topic 等於路徑最後一部分（章/節/冊），則只顯示路徑
         const isPathOnly = topics.length === 1 && topics[0] === lastPart;
         
         if (isPathOnly) {
@@ -234,33 +266,123 @@ function renderCache() {
              html += `<div class="cache-item">‧ ${path} <br> (${combinedTopics})</div>`;
         }
     });
-    
     cacheDiv.innerHTML = html;
 }
 
-// ============== 核心修改區: addToCache() 移除勾選限制，改為分層級存入 ==============
+// ================ 課程資料產生器 (Parser) 函數 ================
+function parseTextToJSON() {
+    const text = document.getElementById('importTextArea').value;
+    const lines = text.split('\n');
+    let bookData = {};
+    let currentBook = null;
+    let currentChapter = null;
+    let currentSection = null;
+
+    const exportAreaDiv = document.getElementById('exportArea');
+    const exportTextArea = document.getElementById('exportTextArea');
+
+    try {
+        if (text.trim() === "") {
+            throw new Error("輸入框是空的。");
+        }
+        for (const rawLine of lines) {
+            let line = rawLine;
+            if (line.trim() === "") continue; 
+            let indentLevel = 0;
+            while (line.startsWith('\t')) {
+                line = line.substring(1);
+                indentLevel++;
+            }
+            line = line.trim();
+            if (line === "") continue;
+
+            switch (indentLevel) {
+                case 0: // Level 1 - 冊別
+                    currentBook = line;
+                    bookData[currentBook] = {};
+                    currentChapter = null;
+                    currentSection = null;
+                    break;
+                case 1: // Level 2 - 章節
+                    if (!currentBook) throw new Error(`[格式錯誤] 發現「章節」但尚未定義「冊別」：${line}`);
+                    currentChapter = line;
+                    bookData[currentBook][currentChapter] = {};
+                    currentSection = null;
+                    break;
+                case 2: // Level 3 - 小節
+                    if (!currentChapter) throw new Error(`[格式錯誤] 發現「小節」但尚未定義「章節」：${line}`);
+                    currentSection = line;
+                    bookData[currentBook][currentChapter][currentSection] = [];
+                    break;
+                case 3: // Level 4 - 重點
+                    if (!currentSection) throw new Error(`[格式錯誤] 發現「重點」但尚未定義「小節」：${line}`);
+                    bookData[currentBook][currentChapter][currentSection].push(line);
+                    break;
+                default:
+                    if (currentSection) {
+                        bookData[currentBook][currentChapter][currentSection].push(line);
+                    } else {
+                        console.warn("忽略縮排格式錯誤的行：", line);
+                    }
+                    break;
+            }
+        }
+        if (Object.keys(bookData).length === 0) {
+             throw new Error("沒有偵測到任何有效的「冊別」資料。請確認最上層（無縮排）為冊別名稱。");
+        }
+
+        // 將JS物件轉換為格式化的 JSON 字串
+        let outputJson = JSON.stringify(bookData, null, 2);
+        
+        // 移除最外層的 {} 並去除空白
+        outputJson = outputJson.slice(1, -1).trim();
+
+        const instructions = `/* 1. 複製下方「所有」文字內容。
+ 2. 打開您的 data.js 檔案。
+ 3. 找到您要添加/覆蓋的「科目」，例如 "physics": { ... }
+ 4. 將複製的內容貼到該科目的 { } 大括號 *內部*。
+
+   例如，"physics": {
+     "基礎物理(全)": { ... },  <-- (這是舊資料)
+     
+     (貼在這裡)
+     "選修物理(I)": { ... }   <-- (這是新貼上的)
+
+   }
+ 5. 注意：請確保「冊別」之間有逗號 ,
+*/
+
+`;
+        exportTextArea.value = instructions + outputJson;
+        exportAreaDiv.style.display = 'block';
+
+    } catch (e) {
+        exportTextArea.value = "轉換失敗：\n" + e.message + "\n\n請檢查您的縮排格式是否正確（必須使用 Tab 鍵，而非空白鍵）。";
+        exportAreaDiv.style.display = 'block';
+    }
+}
+
+// ================ 核心進度功能 ================
 function addToCache() {
     let itemsToCache = [];
     const checks = document.querySelectorAll("#topicArea input[type=checkbox]:checked");
-    
-    // 1. 優先處理有勾選重點的情況 (最高層級，最細節)
+
     if (checks.length > 0) {
         checks.forEach(cb => {
-            const path = cb.value; 
-            const topic = cb.dataset.topicName; 
+            const path = cb.value;
+            const topic = cb.dataset.topicName;
             itemsToCache.push({ path: path, topic: topic });
-            cb.checked = false; // 清空當前頁面勾選狀態
+            cb.checked = false; 
         });
         console.log(`已將 ${checks.length} 個勾選重點存入暫存區！`);
     } else {
-        // 2. 處理沒有勾選重點，但選單有選取的情況
         const subjectSelect = document.getElementById('subject');
         const subjectKey = subjectSelect ? subjectSelect.value : '';
         const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
         const bookSelect = document.getElementById('bookSelect');
         const chapterSelect = document.getElementById('chapterSelect');
         const sectionSelect = document.getElementById('sectionSelect');
-        
+
         const bookName = bookSelect ? bookSelect.value : '';
         const chapterName = chapterSelect ? chapterSelect.value : '';
         const sectionName = sectionSelect ? sectionSelect.value : '';
@@ -270,57 +392,41 @@ function addToCache() {
 
         if (subjectKey) {
             if (sectionName) {
-                // 2.1. 選到小節: 存入 小節 名稱
                 progressPath = `${bookName} / ${chapterName} / ${sectionName}`;
                 progressName = sectionName;
-                
             } else if (chapterName) {
-                // 2.2. 選到章節: 存入 章節 名稱
                 progressPath = `${bookName} / ${chapterName}`;
                 progressName = chapterName;
-                
             } else if (bookName) {
-                // 2.3. 選到冊別: 存入 冊別 名稱
                 progressPath = `${bookName}`;
                 progressName = bookName;
-                
             } else {
-                // 2.4. 只選到科目 (依照 V11 第 5 點要求，科目如果只選擇了 物理 則輸出物理到暫存區)
-                // 強化邏輯：如果只選科目，且該科目有冊別，則將所有冊別名稱作為 path，科目名稱作為 topic 存入
-                if (BOOKS[subjectKey]) {
+                if (typeof BOOKS !== 'undefined' && BOOKS[subjectKey]) {
                     Object.keys(BOOKS[subjectKey]).forEach(bName => {
-                        // 這裡使用 冊別名 作為 path，科目名作爲 topic，符合輸出要求但避免單純存入科目名。
-                        itemsToCache.push({ path: bName, topic: subjectName }); 
+                        itemsToCache.push({ path: bName, topic: subjectName });
                     });
                      if (itemsToCache.length > 0) {
                          console.log(`偵測到只選科目，已將 ${subjectName} 涉及的 ${itemsToCache.length} 個冊別作為進度存入暫存區！`);
-                         
                      }
-                    // 執行完畢，不需再繼續
                     itemsToCache.forEach(item => {
                         const isDuplicate = progressCache.some(p => p.path === item.path && p.topic === item.topic);
                         if (!isDuplicate) progressCache.push(item);
                     });
-                    saveCache(); 
-                    return; 
+                    saveCache();
+                    return;
                 }
             }
         }
-        
-        // 3. 將最高層級的選擇加入 toCache 列表
         if (progressPath && progressName) {
             itemsToCache.push({ path: progressPath, topic: progressName });
             console.log(`已將選單最高層級：${progressPath} 存入暫存區！`);
         }
-        
-        // 4. 如果沒有任何選取 (包括科目)，則提示
         if (itemsToCache.length === 0) {
             console.log("請在上方選單選擇進度，或勾選重點單元。");
             return;
         }
     }
 
-    // 5. 統一寫入暫存區
     let addedCount = 0;
     itemsToCache.forEach(item => {
         const isDuplicate = progressCache.some(p => p.path === item.path && p.topic === item.topic);
@@ -331,26 +437,17 @@ function addToCache() {
     });
 
     if (addedCount > 0) {
-        saveCache(); // 保存並重新渲染
-        // 如果是多個重點，訊息已在前面輸出
+        saveCache(); 
         if (checks.length === 0 && itemsToCache.length === 1) {
              console.log("進度已存入暫存區。");
-        } else if (checks.length === 0 && itemsToCache.length > 1) {
-             // 處理只選科目的多個冊別情況
-        } else {
-             // 處理多個重點的情況
         }
     } else if (checks.length > 0) {
-        // 有勾選，但都重複
          console.log("您勾選的重點已全部在暫存區中。");
     } else {
-        // 有選單選項，但重複
         console.log("您選擇的進度已在暫存區中。");
     }
 }
 
-
-// 增加一個參數以控制是否顯示警示窗
 function clearCache(showConfirm = false) {
     if (showConfirm) {
         if (!confirm("確定要清空所有暫存區的進度嗎？")) {
@@ -362,19 +459,23 @@ function clearCache(showConfirm = false) {
     console.log("暫存區已清空！");
 }
 
-// 2. 頁數常用選項功能
 function appendPages(text) {
-  const pagesInput = document.getElementById("pages");
-  pagesInput.value = text.trim();
+  document.getElementById("pages").value = text.trim();
 }
 
-// ================ 級聯選單功能 (與 v11 相同) ================
+// ================ 級聯選單功能 ================
 function loadBooks() {
     const subjectKey = document.getElementById('subject').value;
     const bookArea = document.getElementById('bookArea');
+    if (!bookArea) return; // 安全檢查
     bookArea.innerHTML = '';
-    
-    if (!subjectKey || !BOOKS[subjectKey]) {
+
+    if (typeof BOOKS === 'undefined' || !subjectKey || !BOOKS[subjectKey]) {
+        if (subjectKey && typeof BOOKS === 'undefined') {
+             bookArea.innerHTML = `<p style="color:red; font-size:0.9rem;"><b>嚴重錯誤：</b><br>1. 請確認 <code>data.js</code> 檔案在同一個資料夾。<br>2. 請確認 <code>data.js</code> 內部語法正確（例如大括號 <code>{}</code> 或逗號 <code>,</code> 是否有誤）。</p>`;
+        } else if (subjectKey) {
+             bookArea.innerHTML = `<p style="color:red; font-size:0.9rem;">錯誤：在 data.js 中找不到科目 "${subjectKey}" 的資料。</p>`;
+        }
         return;
     }
 
@@ -386,11 +487,9 @@ function loadBooks() {
                 <option value="">--選冊別--</option>
                 ${books.map(b => `<option value="${b}">${b}</option>`).join('')}
              </select>`;
-    
     html += '<div id="chapterSelectArea" style="margin-top:10px;"></div>';
     html += '<div id="sectionSelectArea" style="margin-top:10px;"></div>';
     html += '<div id="topicArea" style="margin-top:10px;"></div>';
-
     bookArea.innerHTML = html;
 }
 
@@ -400,21 +499,26 @@ function loadChapters() {
     const bookName = bookSelect ? bookSelect.value : '';
 
     const chapterArea = document.getElementById('chapterSelectArea');
-    chapterArea.innerHTML = '';
-    document.getElementById('sectionSelectArea').innerHTML = '';
-    document.getElementById('topicArea').innerHTML = ''; 
+    const sectionArea = document.getElementById('sectionSelectArea');
+    const topicArea = document.getElementById('topicArea');
 
+    if (chapterArea) chapterArea.innerHTML = '';
+    if (sectionArea) sectionArea.innerHTML = '';
+    if (topicArea) topicArea.innerHTML = '';
     if (!bookName) return;
 
+    if (typeof BOOKS === 'undefined' || !BOOKS[subjectKey] || !BOOKS[subjectKey][bookName]) {
+        console.error("loadChapters 錯誤：找不到資料", subjectKey, bookName);
+        return;
+    }
+
     const chapters = Object.keys(BOOKS[subjectKey][bookName]);
-    
     let html = '<label>📑 章節</label>';
     html += `<select id="chapterSelect" onchange="loadSections()">
                 <option value="">--選章節--</option>
                 ${chapters.map(c => `<option value="${c}">${c}</option>`).join('')}
              </select>`;
-    
-    chapterArea.innerHTML = html;
+    if (chapterArea) chapterArea.innerHTML = html;
 }
 
 function loadSections() {
@@ -425,20 +529,26 @@ function loadSections() {
     const chapterName = chapterSelect ? chapterSelect.value : '';
 
     const sectionArea = document.getElementById('sectionSelectArea');
-    sectionArea.innerHTML = '';
-    document.getElementById('topicArea').innerHTML = ''; 
-    
+    const topicArea = document.getElementById('topicArea');
+
+    if (sectionArea) sectionArea.innerHTML = '';
+    if (topicArea) topicArea.innerHTML = '';
     if (!chapterName) return;
-    
+
+    if (typeof BOOKS === 'undefined' || !BOOKS[subjectKey] || !BOOKS[subjectKey][bookName] || !BOOKS[subjectKey][bookName][chapterName]) {
+        console.error("loadSections 錯誤：找不到資料", subjectKey, bookName, chapterName);
+        return;
+    }
+
+    // [v13.1] 確保 Object.keys 是正確的
     const sections = Object.keys(BOOKS[subjectKey][bookName][chapterName]);
-    
+
     let html = '<label>📝 小節</label>';
     html += `<select id="sectionSelect" onchange="loadTopics()">
                 <option value="">--選小節--</option>
                 ${sections.map(s => `<option value="${s}">${s}</option>`).join('')}
              </select>`;
-    
-    sectionArea.innerHTML = html;
+    if (sectionArea) sectionArea.innerHTML = html;
 }
 
 function loadTopics() {
@@ -446,21 +556,31 @@ function loadTopics() {
     const bookSelect = document.getElementById('bookSelect');
     const chapterSelect = document.getElementById('chapterSelect');
     const sectionSelect = document.getElementById('sectionSelect');
-    
+
     const bookName = bookSelect ? bookSelect.value : '';
     const chapterName = chapterSelect ? chapterSelect.value : '';
     const sectionName = sectionSelect ? sectionSelect.value : '';
     
     const topicArea = document.getElementById('topicArea');
+    if (!topicArea) return; // 安全檢查
     topicArea.innerHTML = '';
-
     if (!sectionName) return;
+
+    if (typeof BOOKS === 'undefined' || !BOOKS[subjectKey] || !BOOKS[subjectKey][bookName] || !BOOKS[subjectKey][bookName][chapterName] || !BOOKS[subjectKey][bookName][chapterName][sectionName]) {
+        console.error("loadTopics 錯誤：找不到資料", subjectKey, bookName, chapterName, sectionName);
+        return;
+    }
 
     const topics = BOOKS[subjectKey][bookName][chapterName][sectionName];
 
+    if (!Array.isArray(topics)) {
+        console.error("資料格式錯誤： 'topics' 應該是一個陣列，但卻是：", topics);
+        topicArea.innerHTML = `<p style="color:red; font-size:0.9rem;">資料錯誤：此小節 (${sectionName}) 底下沒有「重點」列表。</p>`;
+        return;
+    }
+
     let html = '<label>✅ 今日進度 (可複選)</label>';
     html += '<div style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; padding: 8px; border-radius: 8px;">';
-    
     topics.forEach((topic, index) => {
         const progressPath = `${bookName} / ${chapterName} / ${sectionName}`;
         const uniqueId = `topic-${sectionName.replace(/\s/g, '_')}-${index}`;
@@ -469,44 +589,50 @@ function loadTopics() {
                     <label for="${uniqueId}" class="unit-label">${topic}</label>
                  </div>`;
     });
-    
     html += '</div>';
     topicArea.innerHTML = html;
 }
 
-
+// ================ 日期功能 (v13.1 修正) ================
 function formatDate(date) {
   const d = new Date(date);
   const year = d.getFullYear();
+  // *** [v13.1 修正] 這裡就是修正點： '0' ( ... ) -> '0' + ( ... ) ***
   const month = ('0' + (d.getMonth() + 1)).slice(-2);
   const day = ('0' + d.getDate()).slice(-2);
   return `${year}-${month}-${day}`;
 }
 function setToday(){
-  document.getElementById("dateInput").value = formatDate(new Date());
+  const dateInput = document.getElementById("dateInput");
+  if (dateInput) {
+    dateInput.value = formatDate(new Date());
+  }
 }
 function setTomorrow(){
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById("dateInput").value = formatDate(tomorrow);
+  const dateInput = document.getElementById("dateInput");
+  if (dateInput) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    dateInput.value = formatDate(tomorrow);
+  }
 }
 
-// ================ 模板功能 (移除警示窗) ================
-let templates = JSON.parse(localStorage.getItem('teachingLogTemplates')) || [];
+// ================ 模板功能 ================
 function saveTemplates() { localStorage.setItem('teachingLogTemplates', JSON.stringify(templates)); }
 function renderTemplates() {
   const list = document.getElementById("templateList");
-  list.innerHTML = templates.map((t, i) => 
-    `<span class="chip" onclick="applyTemplate('${t}')" oncontextmenu="deleteTemplate(${i}, true); return false;">${t}</span>`
-  ).join('');
+  if (list) {
+      list.innerHTML = templates.map((t, i) =>
+        `<span class="chip" onclick="applyTemplate('${t}')" oncontextmenu="deleteTemplate(${i}, true); return false;">${t}</span>`
+      ).join('');
+  }
 }
 function addTemplate() {
   const grade = document.getElementById("gradeSelect").value || "";
   const type = document.getElementById("classTypeSelect").value || "";
   const subj = document.getElementById("subjectSelect").value || "";
   const custom = document.getElementById("customClassName").value.trim() || "";
-  // 修正組合順序為 級別 + 科目 + 類型
-  const name = custom || `${grade}${subj}${type}`; 
+  const name = custom || `${grade}${subj}${type}`;
   if (name && !templates.includes(name)) {
     templates.push(name);
     saveTemplates();
@@ -517,10 +643,8 @@ function applyTemplate(name) {
   document.getElementById("customClassName").value = name;
 }
 function deleteTemplate(index, showConfirm = false) {
-    if (showConfirm) {
-        if (!confirm(`確定刪除模板：${templates[index]} 嗎？`)) {
-            return;
-        }
+    if (showConfirm && !confirm(`確定刪除模板：${templates[index]} 嗎？`)) {
+        return;
     }
     templates.splice(index, 1);
     saveTemplates();
@@ -534,33 +658,29 @@ function fillTemplate() {
     const subj = document.getElementById("subjectSelect").value || "";
     const custom = document.getElementById("customClassName").value.trim();
     if (custom) return custom;
-    // 修正組合順序為 級別 + 科目 + 類型
-    const combo = grade + subj + type;
-    return combo; 
+    return (grade + subj + type);
   })();
   document.getElementById("customClassName").value = className;
 }
 function clearTemplates(showConfirm = false) {
-    if (showConfirm) {
-        if (!confirm("確定清空所有班級模板嗎？")) {
-            return;
-        }
+    if (showConfirm && !confirm("確定清空所有班級模板嗎？")) {
+        return;
     }
     templates = [];
     saveTemplates();
     renderTemplates();
     console.log("所有班級模板已清空。");
 }
-renderTemplates();
 
-// ================ 作業句庫功能 (v12-Patch2: 修正 appendHomework 語法錯誤) ================
-let sentences = JSON.parse(localStorage.getItem('homeworkSentences')) || ["講義 p.X~Y", "習題卷", "考卷訂正", "複習指定範圍"];
+// ================ 作業句庫功能 ================
 function saveSentences() { localStorage.setItem('homeworkSentences', JSON.stringify(sentences)); }
 function renderSentences() {
   const list = document.getElementById("sentenceChips");
-  list.innerHTML = sentences.map((s, i) => 
-    `<span class="chip" onclick="appendHomework('${s}')" oncontextmenu="deleteSentence(${i}, true); return false;">${s}</span>`
-  ).join('');
+  if(list) {
+      list.innerHTML = sentences.map((s, i) =>
+        `<span class="chip" onclick="appendHomework('${s}')" oncontextmenu="deleteSentence(${i}, true); return false;">${s}</span>`
+      ).join('');
+  }
 }
 function addSentence() {
   const newS = document.getElementById("newSentence").value.trim();
@@ -571,60 +691,46 @@ function addSentence() {
     document.getElementById("newSentence").value = '';
   }
 }
-
-// *** 修復後的 appendHomework 函數 (V12-Patch2 核心修改) ***
 function appendHomework(s) {
   const homework = document.getElementById("homework");
   if (homework.value.trim() === '') {
     homework.value = s;
   } else if (!homework.value.includes(s)) {
-    // 修正了 homework.endsWith() 錯誤，現在改為 homework.value.endsWith()
     homework.value += (homework.value.endsWith('。') || homework.value.endsWith('、') || homework.value.endsWith('！') || homework.value.endsWith('？') ? '' : '＋') + s;
   }
 }
-// *************************************************
-
 function deleteSentence(index, showConfirm = false) {
-    if (showConfirm) {
-        if (!confirm(`確定刪除句庫：${sentences[index]} 嗎？`)) {
-            return;
-        }
+    if (showConfirm && !confirm(`確定刪除句庫：${sentences[index]} 嗎？`)) {
+        return;
     }
     sentences.splice(index, 1);
     saveSentences();
     renderSentences();
     console.log("句庫項目已刪除。");
 }
-renderSentences();
 
-// ================ 產生日誌功能 (v12-Patch1 優化，無功能變動) ================
+// ================ 產生日誌功能 ================
 function generate() {
-    // 1. 抓取所有值並進行 trim()
     const customClassName = document.getElementById("customClassName").value.trim();
     const date = document.getElementById("dateInput").value.trim();
     const pages = document.getElementById("pages").value.trim();
     const quiz = document.getElementById("quiz").value.trim();
     const homework = document.getElementById("homework").value.trim();
-    
-    // 1.1. 檢查是否有當前選中的重點：自動存入暫存區 (不給提示)
+
     const currentChecks = document.querySelectorAll("#topicArea input[type=checkbox]:checked");
-    let tempCacheFromChecks = [];
     if (currentChecks.length > 0) {
         console.log(`偵測到 ${currentChecks.length} 個勾選重點，自動存入暫存區。`);
         currentChecks.forEach(cb => {
-            const path = cb.value; 
-            const topic = cb.dataset.topicName; 
+            const path = cb.value;
+            const topic = cb.dataset.topicName;
             const newItem = { path: path, topic: topic };
-            
-            // 檢查是否已存在 (避免重複加入)
             const isDuplicate = progressCache.some(item => item.path === path && item.topic === topic);
-
             if (!isDuplicate) {
                 progressCache.push(newItem);
             }
-            cb.checked = false; // 清空當前頁面勾選狀態
+            cb.checked = false;
         });
-        saveCache(); // 保存並重新渲染暫存區
+        saveCache();
     }
 
     const className = (() => {
@@ -632,75 +738,55 @@ function generate() {
         const grade = document.getElementById("gradeSelect").value || "";
         const type = document.getElementById("classTypeSelect").value || "";
         const subj = document.getElementById("subjectSelect").value || "";
-        // 修正組合順序為 級別 + 科目 + 類型
-        const combo = grade + subj + type;
-        return combo.trim();
-    })(); 
+        return (grade + subj + type).trim();
+    })();
 
-    // 2. 處理進度：優先使用暫存區 (progressCache) 中的數據
-    
-    let progressToOutput = []; // 儲存最終要輸出的進度項目
-    
+    let progressToOutput = [];
     if (progressCache.length > 0) {
-        // 2.1. A. 暫存區有資料：使用暫存區 (progressCache)
-        progressToOutput = [...progressCache]; // 複製一份，避免直接修改
+        progressToOutput = [...progressCache];
         console.log("進度來源：暫存區");
     } else {
-        // 2.1. B. 暫存區無資料：嘗試從選單中抓取最高層級進度 (同 addToCache 邏輯，避免重複)
         const subjectSelect = document.getElementById('subject');
         const subjectKey = subjectSelect ? subjectSelect.value : '';
         const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
         const bookSelect = document.getElementById('bookSelect');
         const chapterSelect = document.getElementById('chapterSelect');
         const sectionSelect = document.getElementById('sectionSelect');
-        
         const bookName = bookSelect ? bookSelect.value : '';
         const chapterName = chapterSelect ? chapterSelect.value : '';
         const sectionName = sectionSelect ? sectionSelect.value : '';
-
         let progressPath = '';
         let progressName = '';
 
+        if (typeof BOOKS === 'undefined') {
+             console.error("BOOKS 物件未定義。請確認 data.js 已正確載入。");
+             return;
+        }
         if (sectionName) {
-            // 選到小節 (最高層級：小節)
             progressPath = `${bookName} / ${chapterName} / ${sectionName}`;
             progressName = sectionName;
-            
         } else if (chapterName) {
-            // 只選到章節 (最高層級：章節)
             progressPath = `${bookName} / ${chapterName}`;
             progressName = chapterName;
-            
         } else if (bookName) {
-            // 只選到冊別 (最高層級：冊別)
             progressPath = `${bookName}`;
             progressName = bookName;
-            
-        } else if (subjectKey) {
-            // 只選科目: 輸出科目名稱
-            // 由於這時沒有明確的 path，為了輸出，我們取所有冊別作為 path，科目名作為 topic
-            if (BOOKS[subjectKey]) {
-                Object.keys(BOOKS[subjectKey]).forEach(bName => {
-                     progressToOutput.push({ path: bName, topic: subjectName }); 
-                });
-            }
+        } else if (subjectKey && BOOKS[subjectKey]) {
+            Object.keys(BOOKS[subjectKey]).forEach(bName => {
+                 progressToOutput.push({ path: bName, topic: subjectName });
+            });
             console.log("進度來源：選單 (只選科目)");
         }
-        
-        // 將最高層級的單一選擇加入 output 列表
         if (progressPath && progressName) {
              progressToOutput.push({ path: progressPath, topic: progressName });
              console.log("進度來源：選單 (最高層級)");
         }
-        
     }
-    
-    // 2.2. 將進度依路徑重新分組 (不論來源是暫存區還是自動抓取)
+
     const groupedProgress = new Map();
     progressToOutput.forEach(item => {
       const path = item.path;
-      const topic = item.topic || path.split(' / ').pop(); // 如果沒有 topic，使用路徑的最後一部分
-      
+      const topic = item.topic || path.split(' / ').pop();
       if (groupedProgress.has(path)) {
         if (!groupedProgress.get(path).includes(topic)) {
              groupedProgress.get(path).push(topic);
@@ -711,76 +797,40 @@ function generate() {
     });
 
     const progressLines = [];
-    
-    // 2.3. 遍歷 Map 輸出，使用緊湊格式
     groupedProgress.forEach((topics, path) => {
-      // 輸出格式: ‧ 冊別 / 章節 / 小節 (重點1 ＋ 重點2)
       const combinedTopics = topics.join(' ＋ ');
       const parts = path.split(' / ');
       const lastPart = parts.slice(-1)[0];
-      
-      // 判斷是否為「單一」進度，且重點名稱與路徑末端名稱相同 (或為只選科目的情況)
-      const isSingleMatch = (topics.length === 1 && (topics[0] === lastPart || topics[0] === document.getElementById('subject').options[document.getElementById('subject').selectedIndex].text));
+      const subjectDropdown = document.getElementById('subject');
+      const selectedSubjectText = subjectDropdown ? subjectDropdown.options[subjectDropdown.selectedIndex].text : '';
+      const isSingleMatch = (topics.length === 1 && (topics[0] === lastPart || topics[0] === selectedSubjectText));
 
       if (isSingleMatch) {
          progressLines.push(`‧ ${path}`);
       } else {
          progressLines.push(`‧ ${path} (${combinedTopics})`);
       }
-      
     });
-
     const progressOutput = progressLines.join('\n');
 
-
-    // 3. 組合最終結果 (空值完全不顯示區塊，區塊間只有一個換行符)
     let result = [];
-
-    // 班級
-    if (className) {
-        result.push(`🏫 班級\n${className}`);
-    }
-
-    // 日期
-    if (date) {
-        result.push(`🗓️ 日期\n${date}`);
-    }
-
-    // 進度 (從暫存區或選單取出，可空)
-    if (progressOutput) {
-        result.push(`📘 今日進度\n${progressOutput}`);
-    }
-
-    // 頁數
-    if (pages) {
-        result.push(`📄 頁數\n${pages}`);
-    }
-
-    // 小考
-    if (quiz) {
-        result.push(`🧾 小考\n${quiz}`);
-    }
-
-    // 作業
-    if (homework) {
-        result.push(`🏠 作業\n${homework}`);
-    }
+    if (className) { result.push(`🏫 班級\n${className}`); }
+    if (date) { result.push(`🗓️ 日期\n${date}`); }
+    if (progressOutput) { result.push(`📘 今日進度\n${progressOutput}`); }
+    if (pages) { result.push(`📄 頁數\n${pages}`); }
+    if (quiz) { result.push(`🧾 小考\n${quiz}`); }
+    if (homework) { result.push(`🏠 作業\n${homework}`); }
     
-    // 4. 輸出
     const out = document.getElementById("output");
     out.style.display="block";
-    // 使用 \n 分隔每個區塊 (實現區塊間無空行)
-    out.textContent = result.join('\n').trim(); 
+    out.textContent = result.join('\n').trim();
     out.scrollIntoView({behavior:"smooth"});
-    
-    // 產生後清空暫存區
+
     if (progressCache.length > 0) {
-        // 只要使用了暫存區的內容，就清空
         progressCache = [];
-        saveCache(); // 清空並保存
+        saveCache();
     }
 }
-
 
 function copyOutput(){
     const text=document.getElementById("output").textContent;
@@ -789,41 +839,66 @@ function copyOutput(){
         return;
     }
     navigator.clipboard.writeText(text).then(() => {
-        console.log("已複製到剪貼簿！"); // 使用 console.log 替代 alert
+        console.log("已複製到剪貼簿！");
     }).catch(err => {
         console.error('複製失敗:', err);
     });
 }
 
-// 增加一個參數以控制是否顯示警示窗
 function clearAll(showConfirm = false){
-    if (showConfirm) {
-        if (!confirm("確定清空所有輸入框內容與暫存區嗎？")) {
-            return;
-        }
+    if (showConfirm && !confirm("確定清空所有輸入框內容與暫存區嗎？")) {
+        return;
     }
     document.getElementById("dateInput").value = "";
-    document.getElementById("bookArea").innerHTML = ""; 
+    document.getElementById("bookArea").innerHTML = "";
     document.getElementById("pages").value = "";
     document.getElementById("quiz").value = "";
     document.getElementById("homework").value = "";
     document.getElementById("customClassName").value = "";
     document.getElementById("output").textContent = "";
     document.getElementById("output").style.display="none";
-    
-    // 清空暫存區 (無警示窗)
     progressCache = [];
     saveCache();
+    document.getElementById("importTextArea").value = "";
+    document.getElementById("exportTextArea").value = "";
+    document.getElementById("exportArea").style.display = "none";
+    
+    // 重設科目選單
+    const subjectSelect = document.getElementById('subject');
+    if (subjectSelect) subjectSelect.selectedIndex = 0;
+    
+    // 重新設定日期為今天
+    setToday();
     
     console.log("所有內容已清空！");
 }
 
-// 初始化時設定今日日期並渲染暫存區
+// ================ 初始化 (v13.1 修正) ================
 document.addEventListener('DOMContentLoaded', () => {
-    if (!document.getElementById("dateInput").value) {
-        setToday();
+    try {
+        // 檢查 "BOOKS" 是否已定義
+        if (typeof BOOKS === 'undefined') {
+            console.error("嚴重錯誤：data.js 未載入或 'BOOKS' 物件未定義。");
+            const bookArea = document.getElementById('bookArea');
+            if (bookArea) {
+                 bookArea.innerHTML = `<p style="color:red; font-size:0.9rem;"><b>嚴重錯誤：</b><br>1. 請確認 <code>data.js</code> 檔案在同一個資料夾。<br>2. 請確認 <code>data.js</code> 內部語法正確（例如大括號 <code>{}</code> 或逗號 <code>,</code> 是否有誤）。<br>3. 修正 <code>data.js</code> 檔案後，請「<b>重新整理</b>」頁面。</p>`;
+            }
+        }
+
+        if (!document.getElementById("dateInput").value) {
+            setToday();
+        }
+        
+        // 立即渲染暫存和模板
+        renderCache();
+        renderTemplates();
+        renderSentences();
+        
+    } catch (e) {
+        console.error("初始化時發生嚴重錯誤：", e);
+        // 頁面發生嚴重錯誤，可能是 DOM 元素不存在
+        document.body.innerHTML = `<div style="padding:20px; text-align:center; background:white; border:2px solid red;"><h1>網頁載入失敗</h1><p>HTML 結構可能已損毀，請檢查 <code>index.html</code> 檔案是否完整。</p><p>錯誤訊息： ${e.message}</p></div>`;
     }
-    renderCache();
 });
 </script>
 
